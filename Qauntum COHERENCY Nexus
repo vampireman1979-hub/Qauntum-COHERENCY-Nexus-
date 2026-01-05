@@ -1,0 +1,63 @@
+import numpy as np
+from qiskit import QuantumCircuit, Aer, execute
+from qiskit.visualization import plot_histogram
+
+# ---------------------------------------------------------
+# 8-Qubit Structured Entanglement Network
+# ---------------------------------------------------------
+# Subsystems:
+#   Q0–Q1 : Subsystem A
+#   Q2–Q3 : Subsystem B
+#   Q4–Q5 : Subsystem C
+#   Q6–Q7 : Subsystem D
+#
+# Cross-links:
+#   B → D  (Q3 → Q6)
+#   D → All (Q7 → Q0, Q2, Q4, Q6)
+# ---------------------------------------------------------
+
+qc = QuantumCircuit(8, 8)
+
+# ---------------------------------------------------------
+# 1. Initialize all qubits into superposition
+# ---------------------------------------------------------
+for q in range(8):
+    qc.h(q)
+
+# ---------------------------------------------------------
+# 2. Local entanglement inside each subsystem
+# ---------------------------------------------------------
+subsystems = [(0, 1), (2, 3), (4, 5), (6, 7)]
+
+for control, target in subsystems:
+    qc.cx(control, target)
+
+# ---------------------------------------------------------
+# 3. Cross-link: Subsystem B → Subsystem D
+# ---------------------------------------------------------
+qc.cx(3, 6)
+qc.h(3)
+qc.h(6)
+
+# ---------------------------------------------------------
+# 4. Cross-link: Subsystem D → All other subsystems
+# ---------------------------------------------------------
+for target in [0, 2, 4, 6]:
+    qc.cx(7, target)
+
+# ---------------------------------------------------------
+# 5. Measurement
+# ---------------------------------------------------------
+qc.measure(range(8), range(8))
+
+# ---------------------------------------------------------
+# 6. Simulation
+# ---------------------------------------------------------
+simulator = Aer.get_backend("qasm_simulator")
+job = execute(qc, simulator, shots=1000)
+result = job.result()
+
+counts = result.get_counts(qc)
+print("Measurement results:", counts)
+
+plot_histogram(counts)
